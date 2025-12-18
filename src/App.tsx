@@ -1,14 +1,18 @@
 import { useState, useEffect } from "react";
-import { Flex, Box } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
 import Navbar from "./components/layout/Navbar";
 import Sidebar from "./components/layout/Sidebar";
 import GameGrid from "./components/game/GameGrid";
 import AppBackground from "./components/layout/AppBackground";
 
 
+import GameHeading from "./components/game/GameHeading";
+
+
 function App() {
   const [searchText, setSearchText] = useState("");
   const [selectedGenre, setSelectedGenre] = useState("");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     // Prevent browser from restoring scroll position
@@ -30,15 +34,27 @@ function App() {
 
       {/* Content on top of background */}
       <Box position="relative" zIndex="1">
-        <Navbar onSearch={(searchText) => setSearchText(searchText)} />
+        <Navbar />
 
-        <Flex>
-          <Sidebar onSelectGenre={setSelectedGenre} />
+        <GameHeading
+          onSearch={(searchText) => setSearchText(searchText)}
+          onToggleSidebar={() => setIsSidebarOpen(true)}
+          selectedGenre={selectedGenre}
+        />
 
-          <Box flex="1" p={5}>
-            <GameGrid searchText={searchText} genre={selectedGenre} />
-          </Box>
-        </Flex>
+        <Sidebar
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+          onSelectGenre={(genre) => {
+            setSelectedGenre(genre);
+            setIsSidebarOpen(false); // Close sidebar on selection logic optional, usually good UX on mobile. Keeping it open or closed depends on desktop/mobile. 
+            // For a Drawer UX, usually close on selection.
+          }}
+        />
+
+        <Box p={5}>
+          <GameGrid searchText={searchText} genre={selectedGenre} />
+        </Box>
       </Box>
     </Box>
   );
