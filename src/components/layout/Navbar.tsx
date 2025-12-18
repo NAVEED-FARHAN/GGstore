@@ -24,11 +24,21 @@ function Navbar({ onLogoClick }: NavbarProps) {
         cursor="pointer"
         _hover={{ opacity: 0.8 }}
         transition="opacity 0.2s"
+        zIndex={2} // Ensure logo is clickable above any centered text layer if overlap
       />
 
-      <Text fontSize="2xl" fontWeight="bold" fontStyle="italic">
+      <Text
+        fontSize="3xl"
+        fontWeight="bold"
+        position="absolute"
+        left="50%"
+        transform="translateX(-50%)"
+        width="100%"
+        textAlign="center"
+        pointerEvents="none" // Let clicks pass through if needed (though on top bar unlikely)
+      >
         <Shuffle
-          text="XYBA.gg"
+          text="乂𝚈乃卂.gg"
           shuffleDirection="right"
           duration={1.5}
           animationMode="evenodd"

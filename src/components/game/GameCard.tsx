@@ -8,9 +8,10 @@ interface GameCardProps {
     title: string;
     image: string;
     genres?: string[];
+    onClick?: () => void;
 }
 
-function GameCard({ title, image, genres = ["Action", "RPG"] }: GameCardProps) {
+function GameCard({ title, image, genres = ["Action", "RPG"], onClick }: GameCardProps) {
     const [showHoverCard, setShowHoverCard] = useState(false);
     const [position, setPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
     const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -90,6 +91,8 @@ function GameCard({ title, image, genres = ["Action", "RPG"] }: GameCardProps) {
                 position="relative"
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
+                onClick={onClick}
+                cursor="pointer"
                 transition="all 0.5s"
                 _hover={{ transform: "scale(1.05)", zIndex: 1000 }}
                 // zIndex on this box only affects this stacking context. 

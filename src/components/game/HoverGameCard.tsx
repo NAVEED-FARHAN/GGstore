@@ -57,7 +57,6 @@ const HoverGameCard = ({ title, releaseDate, image, rating, reviewCount, genres,
 
     return (
         <MotionBox
-            variants={containerVariants}
             initial="hidden"
             animate="visible"
             exit="exit"

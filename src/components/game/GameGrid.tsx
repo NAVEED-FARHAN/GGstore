@@ -2,13 +2,15 @@ import { Grid } from "@chakra-ui/react";
 import GameCard from "./GameCard";
 import { BlurFade } from "../ui/BlurFade";
 import { games } from "../../data/games";
+import { Game } from "../../data/games"; // Ortypes
 
 interface Props {
   searchText: string;
   genre: string;
+  onSelectGame: (game: Game) => void;
 }
 
-function GameGrid({ searchText, genre }: Props) {
+function GameGrid({ searchText, genre, onSelectGame }: Props) {
   const filtered = games.filter((game) => {
     const matchesSearch = game.title
       .toLowerCase()
@@ -28,7 +30,12 @@ function GameGrid({ searchText, genre }: Props) {
           delay={0.05 * ((idx * 7) % 4)} // Fast pseudo-random (max 0.15s delay)
           inView
         >
-          <GameCard title={game.title} image={game.image} genres={game.genre} />
+          <GameCard
+            title={game.title}
+            image={game.image}
+            genres={game.genre}
+            onClick={() => onSelectGame(game)}
+          />
         </BlurFade>
       ))}
     </Grid>

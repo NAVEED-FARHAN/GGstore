@@ -7,6 +7,8 @@ import GameGrid from "./components/game/GameGrid";
 import AppBackground from "./components/layout/AppBackground";
 import HomePage from "./components/home/HomePage";
 import GameHeading from "./components/game/GameHeading";
+import GameDetailsModal from "./components/game/GameDetailsModal";
+import { Game } from "./data/games";
 
 const MotionBox = motion(Box);
 
@@ -14,6 +16,8 @@ function App() {
   const [searchText, setSearchText] = useState("");
   const [selectedGenre, setSelectedGenre] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+
   // Transition Stages
   type TransitionStage =
     | 'landing'
@@ -128,12 +132,24 @@ function App() {
           />
 
           <Box p={5}>
-            <GameGrid searchText={searchText} genre={selectedGenre} />
+            <GameGrid
+              searchText={searchText}
+              genre={selectedGenre}
+              onSelectGame={(game) => setSelectedGame(game)}
+            />
           </Box>
         </MotionBox>
       )}
+
+      {/* Game Details Modal */}
+      <GameDetailsModal
+        game={selectedGame}
+        isOpen={!!selectedGame}
+        onClose={() => setSelectedGame(null)}
+      />
     </Box>
   );
 }
+
 
 export default App;

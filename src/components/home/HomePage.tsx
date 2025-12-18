@@ -44,22 +44,23 @@ const HomePage = ({ onEnter }: HomePageProps) => {
                 {/* Using the new TextType component */}
                 {/* We wrap it in Chakra Text to maintain font styles if needed, or pass classNames */}
                 <Text
-                    fontSize={{ base: "x2", md: "2xl" }}
-                    fontWeight="light"
-                    fontFamily="monospace"
+                    fontSize={{ base: "4x2", md: "8x2" }}
+                    fontWeight="normal"
+                    fontFamily="'Press Start 2P', cursive"
                     color="white"
                     textAlign="center"
-                    maxW="900px"
+                    maxW="1000px"
                     minH="5em"
                     px={4}
                     textShadow="0 0 10px rgba(255,255,255,0.5)"
                     as="div"
+                    lineHeight="1.5"
                 >
                     <TextType
                         text={quotes}
                         typingSpeed={40}
                         deletingSpeed={30}
-                        pauseDuration={4000}
+                        pauseDuration={5000}
                         loop={true}
                         showCursor={true}
                     />
