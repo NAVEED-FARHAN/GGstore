@@ -42,6 +42,37 @@ const LightPillar: React.FC<LightPillarProps> = ({
   const timeRef = useRef<number>(0);
   const [webGLSupported, setWebGLSupported] = useState<boolean>(true);
 
+  // Parse color helper
+  const parseColor = (hex: string): THREE.Vector3 => {
+    const color = new THREE.Color(hex);
+    return new THREE.Vector3(color.r, color.g, color.b);
+  };
+
+  // Keep track of target and current values for interpolation
+  const targets = useRef({
+    topColor: parseColor(topColor),
+    bottomColor: parseColor(bottomColor),
+    intensity: intensity,
+    rotationSpeed: rotationSpeed,
+    glowAmount: glowAmount,
+    pillarWidth: pillarWidth,
+    pillarHeight: pillarHeight,
+    noiseIntensity: noiseIntensity,
+    pillarRotation: pillarRotation
+  });
+
+  const currentValues = useRef({
+    topColor: parseColor(topColor),
+    bottomColor: parseColor(bottomColor),
+    intensity: intensity,
+    rotationSpeed: rotationSpeed,
+    glowAmount: glowAmount,
+    pillarWidth: pillarWidth,
+    pillarHeight: pillarHeight,
+    noiseIntensity: noiseIntensity,
+    pillarRotation: pillarRotation
+  });
+
   // Check WebGL support
   useEffect(() => {
     const canvas = document.createElement('canvas');
@@ -52,6 +83,7 @@ const LightPillar: React.FC<LightPillarProps> = ({
     }
   }, []);
 
+  // Initialize Scene & Renderer (Run Once)
   useEffect(() => {
     if (!containerRef.current || !webGLSupported) return;
 
@@ -86,13 +118,7 @@ const LightPillar: React.FC<LightPillarProps> = ({
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // Convert hex colors to RGB
-    const parseColor = (hex: string): THREE.Vector3 => {
-      const color = new THREE.Color(hex);
-      return new THREE.Vector3(color.r, color.g, color.b);
-    };
-
-    // Shader material
+    // Shader materials... (same as before)
     const vertexShader = `
       varying vec2 vUv;
       void main() {
@@ -127,14 +153,12 @@ const LightPillar: React.FC<LightPillarProps> = ({
         return mat2(c, -s, s, c);
       }
 
-      // Procedural noise function
       float noise(vec2 coord) {
         float G = E;
         vec2 r = (G * sin(G * coord));
         return fract(r.x * r.y * (1.0 + coord.x));
       }
 
-      // Apply layered wave deformation to position
       vec3 applyWaveDeformation(vec3 pos, float timeOffset) {
         float frequency = 1.0;
         float amplitude = 1.0;
@@ -151,7 +175,6 @@ const LightPillar: React.FC<LightPillarProps> = ({
         return deformed;
       }
 
-      // Polynomial smooth blending between two values
       float blendMin(float a, float b, float k) {
         float scaledK = k * 4.0;
         float h = max(scaledK - abs(a - b), 0.0);
@@ -166,7 +189,6 @@ const LightPillar: React.FC<LightPillarProps> = ({
         vec2 fragCoord = vUv * uResolution;
         vec2 uv = (fragCoord * 2.0 - uResolution) / uResolution.y;
         
-        // Apply 2D rotation to UV coordinates
         float rotAngle = uPillarRotation * PI / 180.0;
         uv *= rot(rotAngle);
 
@@ -187,16 +209,13 @@ const LightPillar: React.FC<LightPillarProps> = ({
           vec3 pos = origin + direction * depth;
           pos.xz *= rotX;
 
-          // Apply vertical scaling and wave deformation
           vec3 deformed = pos;
           deformed.y *= uPillarHeight;
           deformed = applyWaveDeformation(deformed + vec3(0.0, uTime, 0.0), uTime);
           
-          // Calculate distance field using cosine pattern
           vec2 cosinePair = cos(deformed.xz);
           float fieldDistance = length(cosinePair) - 0.2;
           
-          // Radial boundary constraint
           float radialBound = length(pos.xz) - uPillarWidth;
           fieldDistance = blendMax(radialBound, fieldDistance, 1.0);
           fieldDistance = abs(fieldDistance) * 0.15 + 0.01;
@@ -208,11 +227,9 @@ const LightPillar: React.FC<LightPillarProps> = ({
           depth += fieldDistance;
         }
 
-        // Normalize by pillar width to maintain consistent glow regardless of size
         float widthNormalization = uPillarWidth / 3.0;
         color = tanh(color * uGlowAmount / widthNormalization);
         
-        // Add noise postprocessing
         float rnd = noise(gl_FragCoord.xy);
         color -= rnd / 15.0 * uNoiseIntensity;
         
@@ -227,15 +244,15 @@ const LightPillar: React.FC<LightPillarProps> = ({
         uTime: { value: 0 },
         uResolution: { value: new THREE.Vector2(width, height) },
         uMouse: { value: mouseRef.current },
-        uTopColor: { value: parseColor(topColor) },
-        uBottomColor: { value: parseColor(bottomColor) },
-        uIntensity: { value: intensity },
+        uTopColor: { value: currentValues.current.topColor },
+        uBottomColor: { value: currentValues.current.bottomColor },
+        uIntensity: { value: currentValues.current.intensity },
         uInteractive: { value: interactive },
-        uGlowAmount: { value: glowAmount },
-        uPillarWidth: { value: pillarWidth },
-        uPillarHeight: { value: pillarHeight },
-        uNoiseIntensity: { value: noiseIntensity },
-        uPillarRotation: { value: pillarRotation }
+        uGlowAmount: { value: currentValues.current.glowAmount },
+        uPillarWidth: { value: currentValues.current.pillarWidth },
+        uPillarHeight: { value: currentValues.current.pillarHeight },
+        uNoiseIntensity: { value: currentValues.current.noiseIntensity },
+        uPillarRotation: { value: currentValues.current.pillarRotation }
       },
       transparent: true,
       depthWrite: false,
@@ -248,55 +265,9 @@ const LightPillar: React.FC<LightPillarProps> = ({
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
-    // Mouse interaction - throttled for performance
-    let mouseMoveTimeout: number | null = null;
-    const handleMouseMove = (event: MouseEvent) => {
-      if (!interactive) return;
-
-      if (mouseMoveTimeout) return;
-
-      mouseMoveTimeout = window.setTimeout(() => {
-        mouseMoveTimeout = null;
-      }, 16); // ~60fps throttle
-
-      const rect = container.getBoundingClientRect();
-      const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-      mouseRef.current.set(x, y);
-    };
-
-    if (interactive) {
-      container.addEventListener('mousemove', handleMouseMove, { passive: true });
-    }
-
-    // Animation loop with fixed timestep
-    let lastTime = performance.now();
-    const targetFPS = 120;
-    const frameTime = 1000 / targetFPS;
-
-    const animate = (currentTime: number) => {
-      if (!materialRef.current || !rendererRef.current || !sceneRef.current || !cameraRef.current) return;
-
-      const deltaTime = currentTime - lastTime;
-
-      if (deltaTime >= frameTime) {
-        timeRef.current += 0.016 * rotationSpeed;
-        materialRef.current.uniforms.uTime.value = timeRef.current;
-        rendererRef.current.render(sceneRef.current, cameraRef.current);
-        lastTime = currentTime - (deltaTime % frameTime);
-      }
-
-      rafRef.current = requestAnimationFrame(animate);
-    };
-    rafRef.current = requestAnimationFrame(animate);
-
-    // Handle resize with debouncing
     let resizeTimeout: number | null = null;
     const handleResize = () => {
-      if (resizeTimeout) {
-        clearTimeout(resizeTimeout);
-      }
-
+      if (resizeTimeout) clearTimeout(resizeTimeout);
       resizeTimeout = window.setTimeout(() => {
         if (!rendererRef.current || !materialRef.current || !containerRef.current) return;
         const newWidth = containerRef.current.clientWidth;
@@ -305,52 +276,119 @@ const LightPillar: React.FC<LightPillarProps> = ({
         materialRef.current.uniforms.uResolution.value.set(newWidth, newHeight);
       }, 150);
     };
-
     window.addEventListener('resize', handleResize, { passive: true });
 
-    // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize);
-      if (interactive) {
-        container.removeEventListener('mousemove', handleMouseMove);
-      }
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-      }
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (rendererRef.current) {
         rendererRef.current.dispose();
-        rendererRef.current.forceContextLoss();
         if (container.contains(rendererRef.current.domElement)) {
           container.removeChild(rendererRef.current.domElement);
         }
       }
-      if (materialRef.current) {
-        materialRef.current.dispose();
-      }
-      if (geometryRef.current) {
-        geometryRef.current.dispose();
-      }
+      if (materialRef.current) materialRef.current.dispose();
+      if (geometryRef.current) geometryRef.current.dispose();
+    };
+  }, [webGLSupported]);
 
-      rendererRef.current = null;
-      materialRef.current = null;
-      sceneRef.current = null;
-      cameraRef.current = null;
-      geometryRef.current = null;
-      rafRef.current = null;
+  // Update targets when props change
+  useEffect(() => {
+    targets.current = {
+      topColor: parseColor(topColor),
+      bottomColor: parseColor(bottomColor),
+      intensity: intensity,
+      rotationSpeed: rotationSpeed,
+      glowAmount: glowAmount,
+      pillarWidth: pillarWidth,
+      pillarHeight: pillarHeight,
+      noiseIntensity: noiseIntensity,
+      pillarRotation: pillarRotation
     };
   }, [
-    topColor,
-    bottomColor,
-    intensity,
-    rotationSpeed,
-    interactive,
-    glowAmount,
-    pillarWidth,
-    pillarHeight,
-    noiseIntensity,
-    pillarRotation,
-    webGLSupported
+    topColor, bottomColor, intensity, rotationSpeed,
+    glowAmount, pillarWidth, pillarHeight, noiseIntensity, pillarRotation
   ]);
+
+  // Animation Loop with Interpolation
+  useEffect(() => {
+    if (!webGLSupported) return;
+
+    let lastTime = performance.now();
+    const frameTime = 1000 / 60; // 60fps limit
+
+    // Linear interpolation helper
+    const lerp = (start: number, end: number, factor: number) => {
+      return start + (end - start) * factor;
+    };
+
+    const lerpColor = (start: THREE.Vector3, end: THREE.Vector3, factor: number) => {
+      return new THREE.Vector3(
+        lerp(start.x, end.x, factor),
+        lerp(start.y, end.y, factor),
+        lerp(start.z, end.z, factor)
+      );
+    };
+
+    const animate = (currentTime: number) => {
+      if (!materialRef.current || !rendererRef.current || !sceneRef.current || !cameraRef.current) {
+        rafRef.current = requestAnimationFrame(animate);
+        return;
+      }
+
+      const deltaTime = currentTime - lastTime;
+
+      // Only render if enough time has passed (frame limiting)
+      if (deltaTime >= frameTime) {
+
+        // INTERPOLATION LOGIC
+        // Adjust the factor (0.05) to control smoothness/speed of morph
+        // 0.025 settles in approx 2.5 seconds at 60fps
+        const factor = 0.025;
+
+        const curr = currentValues.current;
+        const tgt = targets.current;
+
+        curr.intensity = lerp(curr.intensity, tgt.intensity, factor);
+        curr.pillarWidth = lerp(curr.pillarWidth, tgt.pillarWidth, factor);
+        curr.pillarHeight = lerp(curr.pillarHeight, tgt.pillarHeight, factor);
+        curr.pillarRotation = lerp(curr.pillarRotation, tgt.pillarRotation, factor);
+        curr.glowAmount = lerp(curr.glowAmount, tgt.glowAmount, factor);
+        curr.noiseIntensity = lerp(curr.noiseIntensity, tgt.noiseIntensity, factor);
+
+        // Colors
+        curr.topColor = lerpColor(curr.topColor, tgt.topColor, factor);
+        curr.bottomColor = lerpColor(curr.bottomColor, tgt.bottomColor, factor);
+
+        // Rotation Speed (interpolated for smooth accel/decel)
+        curr.rotationSpeed = lerp(curr.rotationSpeed, tgt.rotationSpeed, factor);
+
+        // Update Uniforms
+        const uniforms = materialRef.current.uniforms;
+        uniforms.uIntensity.value = curr.intensity;
+        uniforms.uPillarWidth.value = curr.pillarWidth;
+        uniforms.uPillarHeight.value = curr.pillarHeight;
+        uniforms.uPillarRotation.value = curr.pillarRotation;
+        uniforms.uGlowAmount.value = curr.glowAmount;
+        uniforms.uNoiseIntensity.value = curr.noiseIntensity;
+        uniforms.uTopColor.value.copy(curr.topColor);
+        uniforms.uBottomColor.value.copy(curr.bottomColor);
+
+        // Time update using interpolated rotation speed
+        timeRef.current += 0.01 * curr.rotationSpeed;
+        uniforms.uTime.value = timeRef.current;
+
+        rendererRef.current.render(sceneRef.current, cameraRef.current);
+        lastTime = currentTime - (deltaTime % frameTime);
+      }
+      rafRef.current = requestAnimationFrame(animate);
+    };
+    rafRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [webGLSupported]);
 
   if (!webGLSupported) {
     return (

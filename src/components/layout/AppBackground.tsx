@@ -1,7 +1,25 @@
 import { Box } from "@chakra-ui/react";
 import LightPillar from "../ui/LightPillar";
 
-function AppBackground() {
+interface AppBackgroundProps {
+    intensity?: number;
+    rotationSpeed?: number;
+    pillarWidth?: number;
+    pillarHeight?: number;
+    rotation?: number;
+    topColor?: string;
+    bottomColor?: string;
+}
+
+function AppBackground({
+    intensity = 10,
+    rotationSpeed = 0.05,
+    pillarWidth = 20.0,
+    pillarHeight = 0.1,
+    rotation = 45,
+    topColor = "rgba(0, 0, 0, 1)",
+    bottomColor = "#000000ff"
+}: AppBackgroundProps) {
     return (
         <Box
             position="fixed"
@@ -13,15 +31,15 @@ function AppBackground() {
             pointerEvents="none"
         >
             <LightPillar
-                topColor="rgba(0, 0, 0, 1)"
-                bottomColor="#000000ff"
-                intensity={2}
-                rotationSpeed={0.05}
+                topColor={topColor}
+                bottomColor={bottomColor}
+                intensity={intensity}
+                rotationSpeed={rotationSpeed}
                 glowAmount={0.0005}
-                pillarWidth={20.0}
-                pillarHeight={0.1}
+                pillarWidth={pillarWidth}
+                pillarHeight={pillarHeight}
                 noiseIntensity={0}
-                pillarRotation={45}
+                pillarRotation={rotation}
                 interactive={false}
                 mixBlendMode="normal"
             />

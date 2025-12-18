@@ -1,7 +1,11 @@
 import { Flex, Text, Image } from "@chakra-ui/react";
 import Shuffle from '../ui/Shuffle';
 
-function Navbar() {
+interface NavbarProps {
+  onLogoClick?: () => void;
+}
+
+function Navbar({ onLogoClick }: NavbarProps) {
   return (
     <Flex
       bg="rgba(0, 0, 0, 0.75)"
@@ -12,7 +16,15 @@ function Navbar() {
       justify="start"
       gap={3}
     >
-      <Image src="/logo.png" h="45px" objectFit="contain" />
+      <Image
+        src="/logo.png"
+        h="45px"
+        objectFit="contain"
+        onClick={onLogoClick}
+        cursor="pointer"
+        _hover={{ opacity: 0.8 }}
+        transition="opacity 0.2s"
+      />
 
       <Text fontSize="2xl" fontWeight="bold" fontStyle="italic">
         <Shuffle

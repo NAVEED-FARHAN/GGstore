@@ -28,7 +28,7 @@ function GameGrid({ searchText, genre }: Props) {
           delay={0.05 * ((idx * 7) % 4)} // Fast pseudo-random (max 0.15s delay)
           inView
         >
-          <GameCard title={game.title} image={game.image} />
+          <GameCard title={game.title} image={game.image} genres={game.genre} />
         </BlurFade>
       ))}
     </Grid>

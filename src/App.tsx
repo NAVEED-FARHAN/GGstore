@@ -1,64 +1,139 @@
 import { useState, useEffect } from "react";
 import { Box } from "@chakra-ui/react";
+import { AnimatePresence, motion } from "framer-motion";
 import Navbar from "./components/layout/Navbar";
 import Sidebar from "./components/layout/Sidebar";
 import GameGrid from "./components/game/GameGrid";
 import AppBackground from "./components/layout/AppBackground";
-
-
+import HomePage from "./components/home/HomePage";
 import GameHeading from "./components/game/GameHeading";
 
+const MotionBox = motion(Box);
 
 function App() {
   const [searchText, setSearchText] = useState("");
   const [selectedGenre, setSelectedGenre] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  // Transition Stages
+  type TransitionStage =
+    | 'landing'
+    | 'fading-out-landing'
+    | 'morphing-to-main'
+    | 'main'
+    | 'fading-out-main'
+    | 'morphing-to-landing';
 
-  useEffect(() => {
-    // Prevent browser from restoring scroll position
-    if (window.history.scrollRestoration) {
-      window.history.scrollRestoration = "manual";
-    }
+  const [transitionStage, setTransitionStage] = useState<TransitionStage>('landing');
 
-    // Force scroll to top with a slight delay to ensure layout is ready
-    const timer = setTimeout(() => {
-      window.scrollTo(0, 0);
-    }, 10);
+  // Handle Enter click (Landing -> Main)
+  const handleEnter = () => {
+    setTransitionStage('fading-out-landing'); // 0.5s fade out
 
-    return () => clearTimeout(timer);
-  }, []);
+    setTimeout(() => {
+      setTransitionStage('morphing-to-main'); // Background starts morphing to DARK
+
+      // 2.5s morph
+      setTimeout(() => {
+        setTransitionStage('main'); // Main UI Fade In
+      }, 2500);
+
+    }, 500);
+  };
+
+  // Handle Back click (Main -> Landing)
+  const handleBack = () => {
+    setTransitionStage('fading-out-main'); // 0.5s fade out
+
+    setTimeout(() => {
+      setTransitionStage('morphing-to-landing'); // Background starts morphing to LIGHT
+
+      // 2.5s morph
+      setTimeout(() => {
+        setTransitionStage('landing'); // Landing UI Fade In
+      }, 2500);
+
+    }, 500);
+  };
+
+  // Determine Background Props based on stage
+  // We want the background to be "Landing" (Light) when:
+  // - We are AT landing
+  // - We are LEAVING landing (fading out)
+  // - We are MORPHING TO landing (so the target values are Light, and it lerps towards them)
+  const isLandingTarget =
+    transitionStage === 'landing' ||
+    transitionStage === 'fading-out-landing' ||
+    transitionStage === 'morphing-to-landing';
+
+  const bgConfig = isLandingTarget ? {
+    intensity: 0.8,
+    pillarWidth: 3.3,
+    rotationSpeed: 0.5,
+    rotation: 36,
+    topColor: "#ffffff",
+    bottomColor: "#ffffff"
+  } : {
+    intensity: 2,
+    pillarWidth: 20.0,
+    rotationSpeed: 0.05,
+    rotation: 45,
+    topColor: "rgba(0, 0, 0, 1)",
+    bottomColor: "#000000ff"
+  };
 
   return (
     <Box position="relative" minHeight="100vh">
-      <AppBackground />
+      {/* Background */}
+      <AppBackground
+        intensity={bgConfig.intensity}
+        pillarWidth={bgConfig.pillarWidth}
+        rotationSpeed={bgConfig.rotationSpeed}
+        rotation={bgConfig.rotation}
+        topColor={bgConfig.topColor}
+        bottomColor={bgConfig.bottomColor}
+      />
 
-      {/* Content on top of background */}
-      <Box position="relative" zIndex="1">
-        <Navbar />
+      {/* Landing Page Layer */}
+      <AnimatePresence>
+        {(transitionStage === 'landing' || transitionStage === 'fading-out-landing') && (
+          <HomePage onEnter={handleEnter} />
+        )}
+      </AnimatePresence>
 
-        <GameHeading
-          onSearch={(searchText) => setSearchText(searchText)}
-          onToggleSidebar={() => setIsSidebarOpen(true)}
-          selectedGenre={selectedGenre}
-        />
+      {/* Main Content Layer - only mounted when stage is main or fading-out-main to trigger entrance animations */}
+      {(transitionStage === 'main' || transitionStage === 'fading-out-main') && (
+        <MotionBox
+          position="relative"
+          zIndex="1"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: transitionStage === 'main' ? 1 : 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5, ease: "easeIn" }}
+        >
+          <Navbar onLogoClick={handleBack} />
 
-        <Sidebar
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
-          onSelectGenre={(genre) => {
-            setSelectedGenre(genre);
-            setIsSidebarOpen(false); // Close sidebar on selection logic optional, usually good UX on mobile. Keeping it open or closed depends on desktop/mobile. 
-            // For a Drawer UX, usually close on selection.
-          }}
-        />
+          <GameHeading
+            onSearch={(searchText) => setSearchText(searchText)}
+            onToggleSidebar={() => setIsSidebarOpen(true)}
+            selectedGenre={selectedGenre}
+          />
 
-        <Box p={5}>
-          <GameGrid searchText={searchText} genre={selectedGenre} />
-        </Box>
-      </Box>
+          <Sidebar
+            isOpen={isSidebarOpen}
+            onClose={() => setIsSidebarOpen(false)}
+            onSelectGenre={(genre) => {
+              setSelectedGenre(genre);
+              setIsSidebarOpen(false);
+            }}
+          />
+
+          <Box p={5}>
+            <GameGrid searchText={searchText} genre={selectedGenre} />
+          </Box>
+        </MotionBox>
+      )}
     </Box>
   );
 }
-
 
 export default App;
